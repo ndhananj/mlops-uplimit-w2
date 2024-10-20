@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from ray import serve
 from ray.serve.handle import DeploymentHandle
+from loguru import logger
 
 from src.data_models import SimpleModelRequest, SimpleModelResponse, SimpleModelResults
 from src.model import Model
@@ -13,7 +14,7 @@ app = FastAPI(
 
 # TODO: Add in appropriate logging using loguru wherever you see fit
 # in order to aid with debugging issues.
-
+logger.add("app.log", rotation="500 MB")
 
 @serve.deployment(
     ray_actor_options={"num_cpus": 0.2},
@@ -28,7 +29,9 @@ class APIIngress:
     async def predict(self, request: SimpleModelRequest):
         # DONE: Use the handle.predict which is a remote function
         # to get the result
+        logger.info(f"Received prediction request for review: {request.review[:50]}...")
         result = await self.handle.predict.remote(request.review)
+        logger.info("Prediction completed successfully")
         return SimpleModelResponse.model_validate(result.model_dump())
 
 
@@ -42,7 +45,9 @@ class SimpleModel:
 
     def predict(self, review: str) -> SimpleModelResults:
         # DONE: Use the Model.predict to get the result
+        logger.info(f"Predicting sentiment for review: {review[:50]}...")
         result = self.session.predict(review)
+        logger.info("Prediction completed")
         return SimpleModelResults.model_validate(result)
 
 
